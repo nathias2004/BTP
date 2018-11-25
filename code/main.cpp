@@ -9,6 +9,31 @@ using namespace std;
 
 
 
+
+
+
+
+
+//main functions
+void cluster_nodes_into_pages(){
+
+}
+
+
+
+int Two_Way_Prtitioning(){
+	
+}
+
+
+
+
+
+
+
+
+
+
 int main(){
 	//initialise and define page and secondary memory and primary memory
 	//read the data from the file
