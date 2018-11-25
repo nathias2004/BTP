@@ -21,8 +21,8 @@ void cluster_nodes_into_pages(){
 
 
 
-int Two_Way_Prtitioning(){
-	
+int Two_Way_Prtitioning(int Min_PageSize){
+
 }
 
 
