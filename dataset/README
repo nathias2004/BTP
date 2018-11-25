@@ -1,0 +1,15 @@
+dataset format:
+{col1, col2, col3, col4, col5}
+
+col1: edge id
+col2: source node id
+col3: destination node id
+col4: time series
+col5: cost of edge at time series ti
+
+this dataset set generated on road network for 10080 minutes
+i.e.  for 1 weeks
+	
+data is recorded for each minutes for 7 days
+	1 x 60 x 24 x 7
+
