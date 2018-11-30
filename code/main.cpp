@@ -106,7 +106,7 @@ int main(){
 	}
 	
 	count = 0;
-	infile.open("dataset_btp.txt");
+	infile.open("/home/sainath/Desktop/dataset_btp.txt");
 	if(infile.is_open()){
 		while(infile){
 			string s;
@@ -122,21 +122,48 @@ int main(){
 
 			if(count == 0){
 				pageno1 = "page_"+to_string(Bplus[string_to_int(record[1])])+".txt";
-				pageno2 = "page_"+to_string(Bplus[string_to_int(record[2])])+".txt";
 				outfile1.open(pageno1,ios_base::app);
-				outfile2.open(pageno2,ios_base::app);
 				outfile1<<"\ns "<<record[1]<<" "<<record[2]<<" "<<record[3]<<" ";
-				outfile2<<"\np "<<record[2]<<" "<<record[1]<<" "<<record[3]<<" ";
 			}
 			else{
 				outfile1<<record[3]<<" ";
+			}
+			count++;
+			if(count == 10080){
+				count = 0;
+				outfile1.close();
+			}
+		}
+	}
+
+	infile.close();
+
+	infile.open("/home/sainath/Desktop/dataset_btp.txt");
+	if(infile.is_open()){
+		while(infile){
+			string s;
+		    if (!getline( infile, s )) break;
+		    istringstream ss( s );
+		    vector <string> record;
+		    while (ss)
+		    {
+		      string s;
+		      if (!getline( ss, s, ',' )) break;
+		      record.push_back( s );
+		    }
+
+			if(count == 0){
+				pageno2 = "page_"+to_string(Bplus[string_to_int(record[2])])+".txt";
+				outfile2.open(pageno2,ios_base::app);
+				outfile2<<"\np "<<record[2]<<" "<<record[1]<<" "<<record[3]<<" ";
+			}
+			else{
 				outfile2<<record[3]<<" ";
 			}
 			count++;
 			if(count == 10080){
-				outfile1.close();
-				outfile2.close();
 				count = 0;
+				outfile2.close();
 			}
 		}
 	}
@@ -150,6 +177,7 @@ int main(){
 
 	while(1){
 		int flag1;
+
 		cout<<"Press 1 for querying"<<endl;
 		cout<<"Press 2 for inserting a node"<<endl;
 		cout<<"Press 3 for inserting an edge"<<endl;
