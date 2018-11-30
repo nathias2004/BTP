@@ -13,7 +13,10 @@ with open("dataset_btp.txt", 'r') as fobj:
  
 
 L = G.nodes()
+count = 0
 for i in L:
 	for j in G.neighbors(i):
-		print (i,j)
+		count = count + 1
+
+print (count/1417)
 
