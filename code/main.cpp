@@ -8,7 +8,7 @@ unordered_map<int,int>Bplus;
 unordered_map<pair<int,int>,int,boost::hash<pair<int,int>>>Sub_Graph_Edges;
 
 
-
+double calculate_gain(vector<int>X,vector<int>Y,int element,char side);
 
 
 int string_to_int(string s){
@@ -111,9 +111,10 @@ int find_t(vector<int>V_dash){
 
 
 vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
-	//Initialising
+	//Step1: i.e. Initialising
 	int s = V_dash[0];
 	int t = find_t(V_dash);
+    char side='r';
 	vector<int>X;
 	vector<int>Y;
 	vector<int>min_X;
@@ -141,21 +142,34 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 						if(Sub_Graph_Edges[make_pair(X[j],Y[k])] == 1){
 							count = count+1;
 						}
+                        if(Sub_Graph_Edges[make_pair(Y[k],X[j])] == 1){
+							count = count+1;
+						}
 					}
 				}
 				if(Sub_Graph_Edges[make_pair(X[j],t)] == 1){
 					count++;
 				}
+                if(Sub_Graph_Edges[make_pair(t,X[j])] == 1){
+					count++;
+				}
 			}
+            //can be fitted in the above loop
 			for(int k=0;k<Y.size();k++){
-					if(Y[k]!=Y[i]){
-						if(Sub_Graph_Edges[make_pair(Y[i],Y[k])] == 1){
-							count = count+1;
-						}
-					}
+                if(Y[k]!=Y[i]){
+                    if(Sub_Graph_Edges[make_pair(Y[i],Y[k])] == 1){
+                        count = count+1;
+                    }
+                    if(Sub_Graph_Edges[make_pair(Y[k],Y[i])] == 1){
+                        count = count+1;
+                    }
+                }
 			}
 			if(Sub_Graph_Edges[make_pair(Y[i],t)] == 1){
-					count++;
+				count++;
+			}
+            if(Sub_Graph_Edges[make_pair(t,Y[i])] == 1){
+				count++;
 			}
 			ratio_cut = count/((X.size()+1)*(Y.size()));
 			if(ratio_cut<Local_min_ratio_cut){
@@ -176,13 +190,18 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 		if(Global_min_ratio_cut>Local_min_ratio_cut){
 			min_X = X;
 			min_Y = Y;
+            side='y';
 		}
 	}
-	//left to right i.e X o Y
-	vector<int>X_dummy;
-	X_dummy = X;
-	X = Y;
-	Y = X_dummy;
+	//left to right i.e X to Y
+
+    for(int i=0;i<X.size();i++){
+	    if(X[i]!=s){
+            Y.push_back(X[i]);
+        }
+    }
+    X.clear();
+    X.push_back(t);
 
 	while(Y.size()!=0){
 		double Local_min_ratio_cut = 100000.0;
@@ -194,22 +213,34 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 						if(Sub_Graph_Edges[make_pair(X[j],Y[k])] == 1){
 							count = count+1;
 						}
+                        if(Sub_Graph_Edges[make_pair(Y[k],X[j])] == 1){
+							count = count+1;
+						}
 					}
 				}
 				if(Sub_Graph_Edges[make_pair(X[j],t)] == 1){
 					count++;
 				}
+                if(Sub_Graph_Edges[make_pair(t,X[j])] == 1){
+					count++;
+				}
 			}
 			for(int k=0;k<Y.size();k++){
-					if(Y[k]!=Y[i]){
-						if(Sub_Graph_Edges[make_pair(Y[i],Y[k])] == 1){
-							count = count+1;
-						}
-					}
+                if(Y[k]!=Y[i]){
+                    if(Sub_Graph_Edges[make_pair(Y[i],Y[k])] == 1){
+                        count = count+1;
+                    }
+                    if(Sub_Graph_Edges[make_pair(Y[k],Y[i])] == 1){
+                        count = count+1;
+                    }
+                }
 			}
-			if(Sub_Graph_Edges[make_pair(Y[i],t)] == 1){
-					count++;
+			if(Sub_Graph_Edges[make_pair(Y[i],s)] == 1){
+				count++;
 			}
+            if(Sub_Graph_Edges[make_pair(s,Y[i])] == 1){
+				count++;
+            }
 			ratio_cut = count/((X.size()+1)*(Y.size()));
 			if(ratio_cut<Local_min_ratio_cut){
 				Local_min_ratio_cut = ratio_cut;
@@ -229,12 +260,305 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 		if(Global_min_ratio_cut>Local_min_ratio_cut){
 			min_X = X;
 			min_Y = Y;
+            side='x';
 		}
 	}
 
-
-
+    //step:2 i.e. iterative shifting
+    if(side=='y'){
+        X=min_X;
+        Y=min_Y;
+    }
+    else{
+        X=min_Y;
+        Y=min_X;
+    }
+    double prev_ratio_cut=DBL_MAX;
+    while(Global_min_ratio_cut!=prev_ratio_cut){
+        prev_ratio_cut=Global_min_ratio_cut;
+        Global_min_ratio_cut=DBL_MAX;
+        min_X.clear();
+        min_Y.clear();
+        //from Y to X
+        if(side=='x'){
+            while(Y.size()!=0){
+                double Local_min_ratio_cut = 100000.0;
+                for(int i=0;i<Y.size();i++){
+                    int count = 0;
+                    for(int j=0;j<X.size();j++){
+                        for(int k=0;k<Y.size();k++){
+                            if(Y[k]!=Y[i]){
+                                if(Sub_Graph_Edges[make_pair(X[j],Y[k])] == 1){
+                                    count = count+1;
+                                }
+                                if(Sub_Graph_Edges[make_pair(Y[k],X[j])] == 1){
+                                    count = count+1;
+                                }
+                            }
+                        }
+                        if(Sub_Graph_Edges[make_pair(X[j],t)] == 1){
+                            count++;
+                        }
+                        if(Sub_Graph_Edges[make_pair(t,X[j])] == 1){
+                            count++;
+                        }
+                    }
+                    for(int k=0;k<Y.size();k++){
+                        if(Y[k]!=Y[i]){
+                            if(Sub_Graph_Edges[make_pair(Y[i],Y[k])] == 1){
+                                count = count+1;
+                            }
+                            if(Sub_Graph_Edges[make_pair(Y[k],Y[i])] == 1){
+                                count = count+1;
+                            }
+                        }
+                    }
+                    if(Sub_Graph_Edges[make_pair(Y[i],t)] == 1){
+                        count++;
+                    }
+                    if(Sub_Graph_Edges[make_pair(t,Y[i])] == 1){
+                        count++;
+                    }
+                    ratio_cut = count/((X.size()+1)*(Y.size()));
+                    if(ratio_cut<Local_min_ratio_cut){
+                        Local_min_ratio_cut = ratio_cut;
+                        module_to_move = Y[i];
+                    }
+                }
+                X.push_back(module_to_move);
+                vector<int>Y_dummy;
+                for(int i=0;i<Y.size();i++){
+                    if(Y[i]!=module_to_move){
+                        Y_dummy.push_back(Y[i]);
+                    }
+                }
+                Y.clear();
+                Y = Y_dummy;
+                Y_dummy.clear();
+                if(Global_min_ratio_cut>Local_min_ratio_cut){
+                    min_X = X;
+                    min_Y = Y;
+                    side='y';
+                }
+            }
+        }
+        //left to right i.e X to Y
+        else{
+            while(X.size()!=0){
+                double Local_min_ratio_cut = 100000.0;
+                for(int i=0;i<X.size();i++){
+                    int count = 0;
+                    for(int j=0;j<Y.size();j++){
+                        for(int k=0;k<X.size();k++){
+                            if(X[k]!=X[i]){
+                                if(Sub_Graph_Edges[make_pair(X[k],Y[j])] == 1){
+                                    count = count+1;
+                                }
+                                if(Sub_Graph_Edges[make_pair(Y[j],X[k])] == 1){
+                                    count = count+1;
+                                }
+                            }
+                        }
+                        if(Sub_Graph_Edges[make_pair(Y[j],s)] == 1){
+                            count++;
+                        }
+                        if(Sub_Graph_Edges[make_pair(s,Y[j])] == 1){
+                            count++;
+                        }
+                    }
+                    for(int k=0;k<X.size();k++){
+                        if(X[k]!=X[i]){
+                            if(Sub_Graph_Edges[make_pair(X[i],X[k])] == 1){
+                                count = count+1;
+                            }
+                            if(Sub_Graph_Edges[make_pair(X[k],X[i])] == 1){
+                                count = count+1;
+                            }
+                        }
+                    }
+                    if(Sub_Graph_Edges[make_pair(X[i],s)] == 1){
+                        count++;
+                    }
+                    if(Sub_Graph_Edges[make_pair(s,X[i])] == 1){
+                        count++;
+                    }
+                    ratio_cut = count/((Y.size()+1)*(X.size()));
+                    if(ratio_cut<Local_min_ratio_cut){
+                        Local_min_ratio_cut = ratio_cut;
+                        module_to_move = X[i];
+                    }
+                }
+                Y.push_back(module_to_move);
+                vector<int>X_dummy;
+                for(int i=0;i<X.size();i++){
+                    if(X[i]!=module_to_move){
+                        X_dummy.push_back(X[i]);
+                    }
+                }
+                X.clear();
+                X = X_dummy;
+                X_dummy.clear();
+                if(Global_min_ratio_cut>Local_min_ratio_cut){
+                    min_X = X;
+                    min_Y = Y;
+                    side='x';
+                }
+            }
+        }
+        X=min_X;
+        Y=min_Y;
+    }
+    //step:3 i.e group swapping
+    if(side=='x'){
+        Y.push_back(t);
+    }
+    else{
+        X.push_back(s);
+    }
+    Global_min_ratio_cut=DBL_MAX;
+    unordered_map<int,int>locked;
+    int total_size=X.size()+Y.size();
+    int locked_count=2;
+    double local_gain=DBL_MIN;
+    double global_gain=0.1;
+    locked[s]=1;
+    locked[t]=1;
+    //loop till global gain is non-positive
+    while(global_gain>0){
+        locked.clear();
+        locked[s]=1;
+        locked[t]=1;
+        locked_count=2;
+        local_gain=DBL_MAX;
+        //as the loop needs to be continued till all the elements are locked, a variable(locked_count) is initialised
+        //in order to check which element are locked, an unordered_map is initialised where s and t are always initialised to 1
+        // a variable 'side' is maintained to check if the element with largest 'local_gain' is from X or Y
+        while(locked_count<total_size){
+            //check for elements that are not locked in X
+            for(int i=0;i<X.size();i++){
+                if(locked[X[i]]==0){ //if not locked
+                    double tmp_gain;
+                    tmp_gain=calculate_gain(X,Y,X[i],'x');// get the gain
+                    if(tmp_gain>local_gain){ // if it is greater than local, change the value of local to tmp and update side
+                        local_gain=tmp_gain;
+                        global_gain=max(global_gain,local_gain);
+                        module_to_move=X[i];
+                        side='x';
+                    }
+                }
+            }
+            //same for elements in Y
+            for(int i=0;i<Y.size();i++){
+                if(locked[Y[i]]==0){
+                    double tmp_gain;
+                    local_gain=calculate_gain(X,Y,Y[i],'y');
+                    if(tmp_gain>local_gain){
+                        local_gain=tmp_gain;
+                        global_gain=max(global_gain,local_gain);
+                        module_to_move=X[i];
+                        side='y';
+                    }
+                }
+            }
+            //swap the module with largest gain here
+            //element can be from X or Y. Use 'side' variable to find the set
+            if(side=='x'){
+                Y.push_back(module_to_move);
+                vector<int>X_dummy;
+                for(int i=0;i<X.size();i++){
+                    if(X[i]!=module_to_move){
+                        X_dummy.push_back(X[i]);
+                    }
+                }
+                X=X_dummy;
+                X_dummy.clear();
+            }
+            else{
+                X.push_back(module_to_move);
+                vector<int>Y_dummy;
+                for(int i=0;i<Y.size();i++){
+                    if(Y[i]!=module_to_move){
+                        Y_dummy.push_back(Y[i]);
+                    }
+                }
+                Y=Y_dummy;
+                Y_dummy.clear();
+            }
+            locked_count++; //increase the count of locked nodes
+            locked[module_to_move]=1; //update the map
+        }
+    }
 }
+
+double calculate_gain(vector<int>X,vector<int>Y,int element,char side){
+    //calculate ratio_cut1 without shifting the element
+    int count=0,ratio_cut1,ratio_cut2;
+    for(int i=0;i<X.size();i++){
+        for(int j=0;j<Y.size();j++){
+            if(Sub_Graph_Edges[make_pair(X[i],Y[j])] == 1){
+                count++;
+            }
+            if(Sub_Graph_Edges[make_pair(Y[j],X[i])] == 1){
+                count++;
+            }
+        }
+    }
+    ratio_cut1 = count/((Y.size())*(X.size()));
+    count=0;
+
+    //calculate ratio_cut2. As there are two sets, there will be 2 conditions.
+    //In order to transfer from set X to set Y, enter into condition1 else into condition2
+    if(side=='x'){
+        //calculate number of edges crossing the cut without 'element'
+        for(int i=0;i<X.size();i++){
+            for(int j=0;j<Y.size();j++){
+                if(X[i]!=element){
+                    if(Sub_Graph_Edges[make_pair(X[i],Y[j])] == 1){
+                        count++;
+                    }
+                    if(Sub_Graph_Edges[make_pair(Y[j],X[i])] == 1){
+                        count++;
+                    }
+                }
+            }
+        }
+        //now include the 'element' into the count
+        for(int i=0;i<X.size();i++){
+            if(Sub_Graph_Edges[make_pair(X[i],element)] == 1){
+                count++;
+            }
+            if(Sub_Graph_Edges[make_pair(element,X[i])] == 1){
+                count++;
+            }
+        }
+        ratio_cut2 = count/((Y.size()+1)*(X.size()-1));
+    }
+    else{
+        for(int i=0;i<Y.size();i++){
+            for(int j=0;j<X.size();j++){
+                if(Y[i]!=element){
+                    if(Sub_Graph_Edges[make_pair(Y[i],X[j])] == 1){
+                        count++;
+                    }
+                    if(Sub_Graph_Edges[make_pair(X[j],Y[i])] == 1){
+                        count++;
+                    }
+                }
+            }
+        }
+        for(int i=0;i<Y.size();i++){
+            if(Sub_Graph_Edges[make_pair(Y[i],element)] == 1){
+                count++;
+            }
+            if(Sub_Graph_Edges[make_pair(element,Y[i])] == 1){
+                count++;
+            }
+        }
+        ratio_cut2 = count/((Y.size()-1)*(X.size()+1));
+    }
+    return ratio_cut1-ratio_cut2;
+}
+
 
 
 //main functions
@@ -249,17 +573,6 @@ void cluster_nodes_into_pages(vector<int>Nodes,unordered_map<int,int>Nodes_prese
 		A = Two_Way_Partitioning(V_dash,Page_Size);
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 int main(){
@@ -459,9 +772,6 @@ int main(){
 			return 0;
 		}
 	}
-
-
-
 
 return 0;
 }
