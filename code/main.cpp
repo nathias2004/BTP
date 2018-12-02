@@ -49,9 +49,9 @@ void write_into_newpage(vector<int>records){
                 
             }
         }
-
-
+        Bplus[records[i]]=New_PageNo;
     }
+
 }
 
 
