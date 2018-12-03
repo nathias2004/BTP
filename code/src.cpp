@@ -2,7 +2,7 @@
 #include<bits/stdc++.h>
 #include<boost/functional/hash.hpp>
 using namespace std;
-int Min_PageSize = 4096;
+int PageSize = 4096;			//In KB
 int No_Records_Page = 28;
 int New_PageNo = 1000;
 unordered_map<int,int>Bplus;
@@ -31,10 +31,15 @@ void write_into_newpage(vector<int>records){
 		//goto repective page and bring it
 		pageno2 = "page_"+to_string(Bplus[records[i]])+".txt";
 		infile.open(pageno2);
+		int count = 0;
 		if(infile.is_open()){
 			while(infile){
 				string s;
 			    if (!getline( infile, s )) break;
+			    if(count == 0){
+			    	count++;
+			    	continue;
+			    }
 			    istringstream ss( s );
 			    vector <string> record;
 			    while (ss)
@@ -52,6 +57,7 @@ void write_into_newpage(vector<int>records){
 
 
 	}
+	New_PageNo++;
 }
 
 
@@ -205,7 +211,7 @@ void Left_Shifting(vector<int>&X,vector<int>&Y,int s,int t,vector<int>&min_X,vec
 			Global_min_ratio_cut = Local_min_ratio_cut;
 			min_X = X;
 			min_Y = Y;
-            cout<<"Global_min_ratio_cut: "<<Global_min_ratio_cut<<endl;
+            //cout<<"Global_min_ratio_cut: "<<Global_min_ratio_cut<<endl;
             
 		}
 	}
@@ -266,7 +272,7 @@ void Right_Shifting(vector<int>&X,vector<int>&Y,int s,int t,vector<int>&min_X,ve
 			Global_min_ratio_cut = Local_min_ratio_cut;
 			min_X = X;
 			min_Y = Y;
-            cout<<"Global_min_ratio_cut: "<<Global_min_ratio_cut<<endl;
+            //cout<<"Global_min_ratio_cut: "<<Global_min_ratio_cut<<endl;
             
 		}
 	}
@@ -352,47 +358,35 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 	}
 
 
-for(int i=0;i<X.size();i++){
-	cout<<X[i]<<" ";
-}
-cout<<endl<<endl;
-for(int i=0;i<Y.size();i++){
-	cout<<Y[i]<<" ";
-}
-cout<<endl<<endl;
+	cout<<"Group Swapping"<<endl;
 
-
-cout<<"Group Swapping"<<endl;
-
-   
     //step:3 i.e group swapping
-
-
     unordered_map<int,int>locked;
     int total_size=X.size()+Y.size();
     int locked_count=2;
-    double local_gain=DBL_MIN;
+    double local_gain= -100000.0;
     double global_gain=0.1;
-    int module_to_move;
+    int module_to_move = -1;
     vector<int>minX;
     vector<int>minY;
-    minX=X;
-    minY=Y;
     //loop till global gain is non-positive
-    while(global_gain>0){
-    	global_gain = DBL_MIN;
+    while(1){
+    	global_gain = 0.0;
         locked.clear();
         locked[s]=1;
         locked[t]=1;
         locked_count=2;
-        local_gain=DBL_MIN;
-        X=minX;
-        Y=minY;
         //as the loop needs to be continued till all the elements are locked, a variable(locked_count) is initialised
         //in order to check which elements are locked, an unordered_map is initialised where s and t are always initialised to 1
         // a variable 'side' is maintained to check if the element with largest 'local_gain' is from X or Y
+        vector<int>duplicate_X;
+        vector<int>duplicate_Y;
+        duplicate_X = X;
+        duplicate_Y = Y;
+        double Largest_Acc_Gain = -100000.0;
         while(locked_count<total_size){
             //check for elements that are not locked in X
+            local_gain=-100000.0;
             for(int i=0;i<X.size();i++){
                 if(locked[X[i]]==0){ //if not locked
                     double tmp_gain;
@@ -413,7 +407,7 @@ cout<<"Group Swapping"<<endl;
                     if(tmp_gain>local_gain){
                         local_gain=tmp_gain;
                         // global_gain=max(global_gain,local_gain);
-                        module_to_move=X[i];
+                        module_to_move=Y[i];
                         side='y';
                     }
                 }
@@ -442,39 +436,33 @@ cout<<"Group Swapping"<<endl;
                 Y=Y_dummy;
                 Y_dummy.clear();
             }
-
-            if(local_gain>global_gain){
-	            minX=X;
-	            minY=Y;
-	            global_gain=local_gain;
+            
+        	global_gain = global_gain + local_gain;
+        	if(global_gain>=Largest_Acc_Gain){
+        		Largest_Acc_Gain = global_gain;
+        		minX = X;
+        		minY = Y;
         	}
             locked_count++; //increase the count of locked nodes
             locked[module_to_move]=1; //update the map
-            local_gain=DBL_MIN;
         }
-        cout<<"global gain is : "<<global_gain<<endl;
+
+        if(Largest_Acc_Gain > 0){
+        	X = minX;
+        	Y = minY;
+        }
+        else{
+        	X = duplicate_X;
+        	Y = duplicate_Y;
+        	break;
+        }  
     }
-    //end of step 3
 
-
-
-/*
+	cout<<"partitions after group swapping"<<endl<<endl;
     //Here we get two partitions X and Y
-    X = minX;
-    Y = minY;
 
-	for(int i=0;i<X.size();i++){
-		cout<<X[i]<<" ";
-	}
-	cout<<endl<<endl;
-	for(int i=0;i<Y.size();i++){
-		cout<<Y[i]<<" ";
-	}
-	cout<<endl<<endl;
-
-
-    int size_X ;
-    int size_Y ;
+    int size_X = 0;
+    int size_Y = 0;
     unordered_map<int,int>size_of_records;
     for(int i=0;i<X.size();i++){
     	size_of_records[X[i]] = calculate_no_of_suc_pred(X[i])*50;
@@ -484,6 +472,9 @@ cout<<"Group Swapping"<<endl;
     	size_of_records[Y[i]] = calculate_no_of_suc_pred(Y[i])*50;
     	size_Y = size_Y + size_of_records[Y[i]];
     }
+
+
+
 
     while(size_X<Min_PageSize || size_Y<Min_PageSize){
     	if(size_X<Min_PageSize){
@@ -533,16 +524,24 @@ cout<<"Group Swapping"<<endl;
 	    	size_Y = size_Y + size_of_records[Y[i]];
 	    }
 
-    }*/
+    }
 
+	cout<<size_X<<" "<<size_Y<<endl<<endl;
+	for(int i=0;i<X.size();i++){
+		cout<<X[i]<<" ";
+	}
+	cout<<endl<<endl;
+	for(int i=0;i<Y.size();i++){
+		cout<<Y[i]<<" ";
+	}
+	cout<<endl<<endl;
     return X;
     
 }
 
-double calculate_gain(vector<int>X,vector<int>Y,int element,char side, int type){
-    //calculate ratio_cut1 without shifting the element
-    int count=0;
-    double ratio_cut1,ratio_cut2;
+
+int calculate_crossedges(vector<int>X,vector<int>Y){
+	int count=0;
     for(int i=0;i<X.size();i++){
         for(int j=0;j<Y.size();j++){
             if(Sub_Graph_Edges[make_pair(X[i],Y[j])] == 1){
@@ -553,62 +552,41 @@ double calculate_gain(vector<int>X,vector<int>Y,int element,char side, int type)
             }
         }
     }
-    ratio_cut1 = (count+0.0)/((Y.size())*(X.size()));
-    count=0;
+    return count;
+}
+
+
+double calculate_gain(vector<int>X,vector<int>Y,int element,char side, int type){
+    //calculate ratio_cut1 without shifting the element
+    double ratio_cut1,ratio_cut2;
+    ratio_cut1 = (calculate_crossedges(X,Y)+0.0)/((Y.size())*(X.size()));
+    int count=0;
 
     //calculate ratio_cut2. As there are two sets, there will be 2 conditions.
     //In order to transfer from set X to set Y, enter into condition1 else into condition2
     if(side=='x'){
         //calculate number of edges crossing the cut without 'element'
-        for(int i=0;i<X.size();i++){
-            for(int j=0;j<Y.size();j++){
-                if(X[i]!=element){
-                    if(Sub_Graph_Edges[make_pair(X[i],Y[j])] == 1){
-                        count++;
-                    }
-                    if(Sub_Graph_Edges[make_pair(Y[j],X[i])] == 1){
-                        count++;
-                    }
-                }
-            }
-        }
-        //now include the 'element' into the count
+        Y.push_back(element);
+        vector<int>X_dummy;
         for(int i=0;i<X.size();i++){
         	if(X[i]!=element){
-	            if(Sub_Graph_Edges[make_pair(X[i],element)] == 1){
-	                count++;
-	            }
-	            if(Sub_Graph_Edges[make_pair(element,X[i])] == 1){
-	                count++;
-	            }
-       		}
-        }
-        ratio_cut2 = (count+0.0)/((Y.size()+1)*(X.size()-1));
-    }
-    else{
-        for(int i=0;i<Y.size();i++){
-            for(int j=0;j<X.size();j++){
-                if(Y[i]!=element){
-                    if(Sub_Graph_Edges[make_pair(Y[i],X[j])] == 1){
-                        count++;
-                    }
-                    if(Sub_Graph_Edges[make_pair(X[j],Y[i])] == 1){
-                        count++;
-                    }
-                }
-            }
-        }
-        for(int i=0;i<Y.size();i++){
-        	if(Y[i]!=element){
-        		if(Sub_Graph_Edges[make_pair(Y[i],element)] == 1){
-                	count++;
-            	}
-            	if(Sub_Graph_Edges[make_pair(element,Y[i])] == 1){
-                	count++;
-            	}	
+        		X_dummy.push_back(X[i]);
         	}
         }
-        ratio_cut2 = (count+0.0)/((Y.size()-1)*(X.size()+1));
+        X = X_dummy;
+        
+        ratio_cut2 = (calculate_crossedges(X,Y)+0.0)/((Y.size())*(X.size()));
+    }
+    else{
+     	X.push_back(element);
+     	vector<int>Y_dummy;
+     	for(int i=0;i<Y.size();i++){
+     		if(Y[i]!=element){
+     			Y_dummy.push_back(Y[i]);
+     		}
+     	}
+     	Y = Y_dummy;
+        ratio_cut2 = (calculate_crossedges(X,Y)+0.0)/((Y.size())*(X.size()));
     }
     if(type==1)
     	return ratio_cut1-ratio_cut2;
@@ -616,9 +594,10 @@ double calculate_gain(vector<int>X,vector<int>Y,int element,char side, int type)
 }
 
 //main functions
-void cluster_nodes_into_pages(vector<int>Nodes,int Page_Size){
+void cluster_nodes_into_pages(vector<int>Nodes,int Min_Page_Size){
 	vector<int>F;
 	F = Nodes;
+
 	while(F.size()!=0){
 		//choose a V' from F
 		vector<int>V_dash;
@@ -627,11 +606,11 @@ void cluster_nodes_into_pages(vector<int>Nodes,int Page_Size){
 			Nodes_present[F[i]] = 1;
 		}
 		V_dash = BFS(F,Nodes_present);
+		cout<<"The size from BFS is: "<<V_dash.size()<<end<<endl;
 		vector<int>A;
 		vector<int>A_dash;
 		unordered_map<int,int>A_map;
-		A = Two_Way_Partitioning(V_dash,Page_Size);
-		break;
+		A = Two_Way_Partitioning(V_dash,Min_Page_Size);
 		for(int i=0;i<A.size();i++){
 			A_map[A[i]]=1;
 		}
@@ -648,7 +627,8 @@ void cluster_nodes_into_pages(vector<int>Nodes,int Page_Size){
 			}
 		}
 		int A_size=calculate_no_of_rows(A)*50;
-		if(!(A_size>=Page_Size/2&&A_size<=Page_Size)){
+		if(!(A_size<=2*Min_Page_Size)){
+			cout<<"exceeded page size"<<endl;
 			//remove from F i.e add to F_dummy
 			for(int i=0;i<A.size();i++){
 				F_dummy.push_back(A[i]);
@@ -659,8 +639,9 @@ void cluster_nodes_into_pages(vector<int>Nodes,int Page_Size){
 
 		}
 		int A_dash_size=calculate_no_of_rows(A_dash)*50;
-		if(!(A_dash_size>=Page_Size/2&&A_dash_size<=Page_Size)){
+		if(!(A_dash_size<=2*Min_Page_Size)){
 			//remove from F i.e add to F_dummy
+			cout<<"exceeded page size"<<endl;
 			for(int i=0;i<A_dash.size();i++){
 				F_dummy.push_back(A_dash[i]);
 			}
@@ -681,9 +662,14 @@ int calculate_no_of_suc_pred(int node){ //calculate number of successors and pre
 	ifstream infile;
 	infile.open(pageno);
 	int count=0;
+	int count1 = 0;
 	while(infile){
 		string s;
 		if (!getline( infile, s )) break;
+		if(count1 == 0){
+			count1++;
+			continue;
+		}
 		istringstream ss( s );
 		vector <string> record;
 		while (ss){
@@ -846,7 +832,7 @@ int main(){
 	for(int i=0;i<Nodes.size();i++){
 		Nodes_present[Nodes[i]] = 1;
 	}*/
-	cluster_nodes_into_pages(Nodes,Min_PageSize);
+	cluster_nodes_into_pages(Nodes,(PageSize)/2);
 
 
 

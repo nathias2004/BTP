@@ -452,7 +452,7 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
     unordered_map<int,int>locked;
     int total_size=X.size()+Y.size();
     int locked_count=2;
-    double local_gain=DBL_MIN;
+    double local_gain=-100000.0;
     double global_gain=0.1;
     locked[s]=1;
     locked[t]=1;
