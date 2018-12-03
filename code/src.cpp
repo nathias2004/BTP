@@ -22,13 +22,20 @@ int string_to_int(string s){
 }
 
 void write_into_newpage(vector<int>records){
-	ifstream infile;
-	ofstream outfile1;
-	string pageno1 = "page" + to_string(New_PageNo) + ".txt";
-	outfile1.open(pageno1,ios_base::app);
+	cout<<"Records"<<endl;
+	for(int i=0;i<records.size();i++){
+		cout<<records[i]<<" ";
+	}
+	cout<<endl<<endl;
+	
+	
 	string pageno2;
 	for(int i=0;i<records.size();i++){
 		//goto repective page and bring it
+		ifstream infile;
+		ofstream outfile1;
+		string pageno1 = "page" + to_string(New_PageNo) + ".txt";
+		outfile1.open(pageno1,ios_base::app);
 		pageno2 = "page_"+to_string(Bplus[records[i]])+".txt";
 		infile.open(pageno2);
 		int count = 0;
@@ -54,6 +61,7 @@ void write_into_newpage(vector<int>records){
 				
 			}
 		}
+		infile.close();
 
 
 	}
@@ -63,7 +71,9 @@ void write_into_newpage(vector<int>records){
 
 vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present){
 	unordered_map<int,int>visited;
-	int current_node = F[0];
+	srand(time(0));
+	int random_number=(rand()%F.size()); 
+	int current_node = F[random_number];
 	vector<int>V_dash;
 	V_dash.push_back(current_node);
 	visited[current_node] = 1;
@@ -605,8 +615,10 @@ void cluster_nodes_into_pages(vector<int>Nodes,int Min_Page_Size){
 		for(int i=0;i<F.size();i++){
 			Nodes_present[F[i]] = 1;
 		}
+
 		V_dash = BFS(F,Nodes_present);
-		cout<<"The size from BFS is: "<<V_dash.size()<<end<<endl;
+
+		cout<<"The size from BFS is: "<<V_dash.size()<<endl<<endl;
 		vector<int>A;
 		vector<int>A_dash;
 		unordered_map<int,int>A_map;
