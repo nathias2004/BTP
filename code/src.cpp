@@ -2,16 +2,29 @@
 #include<bits/stdc++.h>
 #include<boost/functional/hash.hpp>
 using namespace std;
-int PageSize = 4096;			//In KB
+long int PageSize = 4194304;			//In KB
 int No_Records_Page = 28;
 int New_PageNo = 1000;
 unordered_map<int,int>Bplus;
+unordered_map<int,int>RecordSizes;
 unordered_map<pair<int,int>,int,boost::hash<pair<int,int>>>Sub_Graph_Edges;
 
 
 double calculate_gain(vector<int>X,vector<int>Y,int element,char side,int type);
 int calculate_no_of_rows(vector<int>);
 int calculate_no_of_suc_pred(int node); //calculate number of successors and predecessors of node
+int calculate_crossedges(vector<int>X,vector<int>Y);
+
+
+
+long int Calculate_Size(vector<int>V){
+	long int size = 0;
+	for(int i=0;i<V.size();i++){
+		size = size + RecordSizes[V[i]];
+	}
+	return size;
+}
+
 
 
 int string_to_int(string s){
@@ -22,12 +35,6 @@ int string_to_int(string s){
 }
 
 void write_into_newpage(vector<int>records){
-	cout<<"Records"<<endl;
-	for(int i=0;i<records.size();i++){
-		cout<<records[i]<<" ";
-	}
-	cout<<endl<<endl;
-	
 	
 	string pageno2;
 	for(int i=0;i<records.size();i++){
@@ -69,7 +76,7 @@ void write_into_newpage(vector<int>records){
 }
 
 
-vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present){
+vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present,long int limit){
 	unordered_map<int,int>visited;
 	srand(time(0));
 	int random_number=(rand()%F.size()); 
@@ -79,9 +86,9 @@ vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present){
 	visited[current_node] = 1;
 	queue<int>my_queue;
 	my_queue.push(current_node);
-	int count = 1;
+	long int count = 0;
 
-	while(count<=56 && !my_queue.empty()){
+	while(count<=(8388608-limit) && !my_queue.empty()){
 		current_node = my_queue.front();
 		my_queue.pop();
 		ifstream infile;
@@ -105,13 +112,14 @@ vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present){
 			    	my_queue.push(N2);
 			    	V_dash.push_back(N2);
 			    	visited[N2] = 1;
-			    	count++;
+			    	count = count + RecordSizes[N2];
 			    }
 		    }
 		    count_space++;
 		}
 		infile.close();
 	}
+	cout<<"Inside BFS the size is : "<<Calculate_Size(V_dash)<<endl;
 	return V_dash;
 }
 
@@ -293,7 +301,7 @@ void Right_Shifting(vector<int>&X,vector<int>&Y,int s,int t,vector<int>&min_X,ve
 
 
 
-vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
+vector<int> Two_Way_Partitioning(vector<int>V_dash,long int Min_PageSize){
 	//Step1: i.e. Initialising
 	int s = V_dash[0];
 	int t = find_t(V_dash);
@@ -311,14 +319,14 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 	//here X contains only s and Y contains remaining including t
 	min_X = X;
 	min_Y = Y;
+	cout<<"Initial partition started"<<endl<<endl;
 	Left_Shifting(X,Y,s,t,min_X,min_Y,Global_min_ratio_cut);
 	dummy_Global_min = Global_min_ratio_cut;
 	//move modules from Y to X completed and X contains all except t and Y contains only t
-	cout<<"Left to right started"<<endl<<endl;
 	Right_Shifting(X,Y,s,t,min_X,min_Y,Global_min_ratio_cut);
 	//We get the intial partition in min_X and min_Y 
 
-	cout<<"Iterative Shifting"<<endl;
+	cout<<"Iterative Shifting started"<<endl<<endl;
 	int flag = 0;
 	if(Global_min_ratio_cut<dummy_Global_min){
 		//It means Global mincut due to right shifting
@@ -368,7 +376,7 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
 	}
 
 
-	cout<<"Group Swapping"<<endl;
+	cout<<"Group Swapping started"<<endl<<endl;
 
     //step:3 i.e group swapping
     unordered_map<int,int>locked;
@@ -379,8 +387,11 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
     int module_to_move = -1;
     vector<int>minX;
     vector<int>minY;
+    int Number_of_passes = 0;
     //loop till global gain is non-positive
     while(1){
+    	cout<<"The ratio_cut after iterative shifting is: "<<(calculate_crossedges(X,Y)+0.0)/(X.size()*Y.size())<<endl<<endl; 
+		cout<<endl<<endl;
     	global_gain = 0.0;
         locked.clear();
         locked[s]=1;
@@ -393,7 +404,7 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
         vector<int>duplicate_Y;
         duplicate_X = X;
         duplicate_Y = Y;
-        double Largest_Acc_Gain = -100000.0;
+        double Largest_Acc_Gain = 0.0;
         while(locked_count<total_size){
             //check for elements that are not locked in X
             local_gain=-100000.0;
@@ -448,16 +459,19 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
             }
             
         	global_gain = global_gain + local_gain;
-        	if(global_gain>=Largest_Acc_Gain){
+        	if(global_gain>Largest_Acc_Gain){
         		Largest_Acc_Gain = global_gain;
         		minX = X;
         		minY = Y;
+        		cout<<"accumulated gain: "<<Largest_Acc_Gain<<endl<<endl;
+        		cout<<"The ratio cut after improvement from before: "<<(calculate_crossedges(minX,minY)+0.0)/(minX.size()*minY.size())<<endl<<endl;
         	}
             locked_count++; //increase the count of locked nodes
             locked[module_to_move]=1; //update the map
         }
-
+        cout<<"Largest accumulated gain: "<<Largest_Acc_Gain<<endl<<endl;
         if(Largest_Acc_Gain > 0){
+        	cout<<"Largest accumulated gain is positive and new X , Y are:"<<endl<<endl;
         	X = minX;
         	Y = minY;
         }
@@ -466,25 +480,23 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
         	Y = duplicate_Y;
         	break;
         }  
+        Number_of_passes++;
+        if(Number_of_passes>20){
+        	cout<<"Broken Here"<<endl<<endl;
+        	break;
+        }
     }
 
-	cout<<"partitions after group swapping"<<endl<<endl;
+	cout<<"group swapping ended"<<endl<<endl;
     //Here we get two partitions X and Y
 
-    int size_X = 0;
-    int size_Y = 0;
-    unordered_map<int,int>size_of_records;
-    for(int i=0;i<X.size();i++){
-    	size_of_records[X[i]] = calculate_no_of_suc_pred(X[i])*50;
-    	size_X = size_X + size_of_records[X[i]];
-    }
-    for (int i=0;i<Y.size();i++){
-    	size_of_records[Y[i]] = calculate_no_of_suc_pred(Y[i])*50;
-    	size_Y = size_Y + size_of_records[Y[i]];
-    }
+    long int size_X = 0;
+    long int size_Y = 0;
+    size_X = Calculate_Size(X);
+    size_Y = Calculate_Size(Y);
 
-
-
+    cout<<"Old size X and Y : "<<size_X<<" "<<size_Y<<endl<<endl;
+    int nodes_moved = 0; 
 
     while(size_X<Min_PageSize || size_Y<Min_PageSize){
     	if(size_X<Min_PageSize){
@@ -527,24 +539,14 @@ vector<int> Two_Way_Partitioning(vector<int>V_dash,int Min_PageSize){
     	}
     	size_X = 0;
     	size_Y = 0;
-    	for(int i=0;i<X.size();i++){
-    	size_X = size_X + size_of_records[X[i]];
-	    }
-	    for (int i=0;i<Y.size();i++){
-	    	size_Y = size_Y + size_of_records[Y[i]];
-	    }
+    	size_X = Calculate_Size(X);
+    	size_Y = Calculate_Size(Y);
+	    nodes_moved++;
+	    cout<<"Nodes moved : "<<nodes_moved<<endl<<endl;
 
     }
 
-	cout<<size_X<<" "<<size_Y<<endl<<endl;
-	for(int i=0;i<X.size();i++){
-		cout<<X[i]<<" ";
-	}
-	cout<<endl<<endl;
-	for(int i=0;i<Y.size();i++){
-		cout<<Y[i]<<" ";
-	}
-	cout<<endl<<endl;
+	cout<<"New size X and Y : "<<size_X<<" "<<size_Y<<endl<<endl;
     return X;
     
 }
@@ -603,22 +605,64 @@ double calculate_gain(vector<int>X,vector<int>Y,int element,char side, int type)
     else return ratio_cut2-ratio_cut1;
 }
 
+void remove_from_F(vector<int>&F, vector<int>&V_dash, unordered_map<int,int>&Nodes_present){
+	unordered_map<int,int>h;
+	for(int i=0;i<V_dash.size();i++){ //maintain a hash map for element of V''
+		h[V_dash[i]]=1;
+	}
+	vector<int>dummyF;
+	dummyF=F;
+	F.clear();
+	for(int i=0;i<dummyF.size();i++){
+		if(h[dummyF[i]]==0){
+			F.push_back(dummyF[i]); //map all node that are present in F-V'
+			Nodes_present[dummyF[i]]=1;
+		}
+	}
+	dummyF.clear();
+}
+
 //main functions
-void cluster_nodes_into_pages(vector<int>Nodes,int Min_Page_Size){
+void cluster_nodes_into_pages(vector<int>Nodes,long int Min_Page_Size){
 	vector<int>F;
 	F = Nodes;
 
 	while(F.size()!=0){
 		//choose a V' from F
+		cout<<"F size: "<<F.size()<<endl<<endl;
 		vector<int>V_dash;
 		unordered_map<int,int>Nodes_present;
 		for(int i=0;i<F.size();i++){
 			Nodes_present[F[i]] = 1;
 		}
 
-		V_dash = BFS(F,Nodes_present);
-
-		cout<<"The size from BFS is: "<<V_dash.size()<<endl<<endl;
+		int BFS_count = 0;
+		while(1){
+			if(Calculate_Size(V_dash)<PageSize){
+				if(F.size()-V_dash.size()>0){ //there are nodes that need to be traversed
+					BFS_count++;
+					Nodes_present.clear();
+					remove_from_F(F,V_dash,Nodes_present);//remove this line
+					vector<int>dummy_V_dash;
+					long int Size_limit = Calculate_Size(V_dash);
+					dummy_V_dash = BFS(F,Nodes_present,Size_limit);
+					V_dash.insert(V_dash.end(),dummy_V_dash.begin(),dummy_V_dash.end());
+					dummy_V_dash.clear();
+					remove_from_F(F,V_dash,Nodes_present);
+				}
+				else{
+					cout<<"Need to do some more changes if i get segfault here"<<endl;
+					write_into_newpage(V_dash);
+					return;
+					//handle extra
+				}
+			}
+			else{
+				break;
+			}
+		}
+		cout<<"BFS_count "<<BFS_count<<endl<<endl;
+		cout<<"The size of V_dash is: "<<V_dash.size()<<" The size in bytes "<<(Calculate_Size(V_dash))/(1024*1024)<<" "<<Calculate_Size(V_dash)<<endl<<endl;
 		vector<int>A;
 		vector<int>A_dash;
 		unordered_map<int,int>A_map;
@@ -632,37 +676,35 @@ void cluster_nodes_into_pages(vector<int>Nodes,int Min_Page_Size){
 				A_map[V_dash[i]]=1;
 			}
 		}
-		vector<int>F_dummy;
-		for(int i=0;i<F.size();i++){
-			if(A_map[F[i]]==0){
-				F_dummy.push_back(F[i]);
-			}
-		}
-		int A_size=calculate_no_of_rows(A)*50;
-		if(!(A_size<=2*Min_Page_Size)){
+		// vector<int>F_dummy;
+		// for(int i=0;i<F.size();i++){
+		// 	if(A_map[F[i]]==0){
+		// 		F_dummy.push_back(F[i]);
+		// 	}
+		// }
+		long int A_size;
+		if(Calculate_Size(A)>PageSize){
 			cout<<"exceeded page size"<<endl;
 			//remove from F i.e add to F_dummy
 			for(int i=0;i<A.size();i++){
-				F_dummy.push_back(A[i]);
+				F.push_back(A[i]);
 			}
 		}
 		else{
 			write_into_newpage(A);
 
 		}
-		int A_dash_size=calculate_no_of_rows(A_dash)*50;
-		if(!(A_dash_size<=2*Min_Page_Size)){
+		long int A_dash_size;
+		if(Calculate_Size(A_dash)>PageSize){
 			//remove from F i.e add to F_dummy
 			cout<<"exceeded page size"<<endl;
 			for(int i=0;i<A_dash.size();i++){
-				F_dummy.push_back(A_dash[i]);
+				F.push_back(A_dash[i]);
 			}
 		}
 		else{
 			write_into_newpage(A_dash);
 		}
-		F=F_dummy;
-		F_dummy.clear();
 		A.clear();
 		A_dash.clear();
 		V_dash.clear();
@@ -764,11 +806,7 @@ int main(){
 	int p_no = 1;
 	for(int i=0;i<Nodes.size();i++){
 		Bplus[Nodes[i]] = p_no;
-		count++;
-		if(count == 12){
-			count = 0;
-			p_no++;
-		}
+		p_no++;
 	}
 	
 	count = 0;
@@ -789,10 +827,10 @@ int main(){
 			if(count == 0){
 				pageno1 = "page_"+to_string(Bplus[string_to_int(record[1])])+".txt";
 				outfile1.open(pageno1,ios_base::app);
-				outfile1<<"\ns "<<record[1]<<" "<<record[2]<<" "<<record[3]<<" ";
+				outfile1<<"\ns "<<record[1]<<" "<<record[2]<<" "<<record[4]<<" ";
 			}
 			else{
-				outfile1<<record[3]<<" ";
+				outfile1<<record[4]<<" ";
 			}
 			count++;
 			if(count == 10080){
@@ -821,10 +859,10 @@ int main(){
 			if(count == 0){
 				pageno2 = "page_"+to_string(Bplus[string_to_int(record[2])])+".txt";
 				outfile2.open(pageno2,ios_base::app);
-				outfile2<<"\np "<<record[2]<<" "<<record[1]<<" "<<record[3]<<" ";
+				outfile2<<"\np "<<record[2]<<" "<<record[1]<<" "<<record[4]<<" ";
 			}
 			else{
-				outfile2<<record[3]<<" ";
+				outfile2<<record[4]<<" ";
 			}
 			count++;
 			if(count == 10080){
@@ -832,6 +870,21 @@ int main(){
 				outfile2.close();
 			}
 		}
+	}
+
+
+//File Size collection
+	for(int i=0;i<Nodes.size();i++){
+		streampos begin,end;
+		string FileName ="page_"+to_string(Bplus[Nodes[i]])+".txt";
+  		ifstream myfile (FileName, ios::binary);
+  		begin = myfile.tellg();
+  		myfile.seekg (0, ios::end);
+  		end = myfile.tellg();
+  		myfile.close();
+  		int A;
+  		A = end-begin;
+		RecordSizes[Nodes[i]] = A;
 	}
 
 
@@ -844,6 +897,7 @@ int main(){
 	for(int i=0;i<Nodes.size();i++){
 		Nodes_present[Nodes[i]] = 1;
 	}*/
+	
 	cluster_nodes_into_pages(Nodes,(PageSize)/2);
 
 
