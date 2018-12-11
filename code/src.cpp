@@ -8,12 +8,33 @@ int New_PageNo = 1000;
 unordered_map<int,int>Bplus;
 unordered_map<int,int>RecordSizes;
 unordered_map<pair<int,int>,int,boost::hash<pair<int,int>>>Sub_Graph_Edges;
+int policy = 1;
 
 
 double calculate_gain(vector<int>X,vector<int>Y,int element,char side,int type);
 int calculate_no_of_rows(vector<int>);
 int calculate_no_of_suc_pred(int node); //calculate number of successors and predecessors of node
 int calculate_crossedges(vector<int>X,vector<int>Y);
+long int Calculate_Size(vector<int>V);
+int string_to_int(string s);
+void write_into_newpage(vector<int>records);
+int find_t(vector<int>V_dash);
+void Left_Shifting(vector<int>&X,vector<int>&Y,int s,int t,vector<int>&min_X,vector<int>&min_Y,double &Global_min_ratio_cut);
+void Right_Shifting(vector<int>&X,vector<int>&Y,int s,int t,vector<int>&min_X,vector<int>&min_Y,double &Global_min_ratio_cut);
+vector<int> Two_Way_Partitioning(vector<int>V_dash,long int Min_PageSize);
+void cluster_nodes_into_pages(vector<int>Nodes,long int Min_Page_Size);
+vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present,long int limit);
+void remove_from_F(vector<int>&F, vector<int>&V_dash, unordered_map<int,int>&Nodes_present);
+void insert_node(string NewRecord_FileName,int New_node,int policy);
+
+
+
+
+bool sortbysec(const pair<int,int> &a, const pair<int,int> &b) { 
+    return (a.second < b.second); 
+} 
+  
+
 
 
 
@@ -33,6 +54,10 @@ int string_to_int(string s){
 	geek>>x;
 	return x;
 }
+
+
+
+
 
 void write_into_newpage(vector<int>records){
 	
@@ -69,8 +94,7 @@ void write_into_newpage(vector<int>records){
 			}
 		}
 		infile.close();
-
-
+		Bplus[records[i]] = New_PageNo;
 	}
 	New_PageNo++;
 }
@@ -119,7 +143,6 @@ vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present,long int limit){
 		}
 		infile.close();
 	}
-	cout<<"Inside BFS the size is : "<<Calculate_Size(V_dash)<<endl;
 	return V_dash;
 }
 
@@ -638,7 +661,10 @@ void cluster_nodes_into_pages(vector<int>Nodes,long int Min_Page_Size){
 
 		int BFS_count = 0;
 		while(1){
+			cout<<"The size of V_dash is: "<<V_dash.size()<<" The size in bytes "<<(Calculate_Size(V_dash))/(1024*1024)<<" "<<Calculate_Size(V_dash)<<endl<<endl;
+
 			if(Calculate_Size(V_dash)<PageSize){
+				cout<<"Number of nodes still there : "<<F.size()-V_dash.size()<<endl<<endl;
 				if(F.size()-V_dash.size()>0){ //there are nodes that need to be traversed
 					BFS_count++;
 					Nodes_present.clear();
@@ -747,6 +773,367 @@ int calculate_no_of_rows(vector<int>A){
 	}
 	return count;
 }
+
+
+
+vector<int>Get_Nodes_In_Page(string FileName){
+	vector<int>Nodes;
+	ifstream infile;
+	infile.open(FileName);
+	if(infile.is_open()){
+		while(infile){
+			string s;
+		    if (!getline( infile, s )) break;
+		    istringstream ss( s );
+		    vector <string> record;
+		    while (ss)
+		    {
+		      string s;
+		      if (!getline( ss, s, ' ' )) break;
+		      record.push_back( s );
+		    }
+		    if(!IsPresent(string_to_int(record[1],Nodes))){
+		    	Nodes.push_back(string_to_int(record[1]));
+		    }
+			
+		}
+	}
+	infile.close();
+	return Nodes;
+}
+
+
+
+vector<int> Get_Neighbour_Pages(string NewRecord_FileName,int Node){
+	vector<int>Neighbours_X;
+	unordered_map<int,int>Neighbour_Check;
+	ifstream infile;
+	infile.open(NewRecord_FileName);
+	if(infile.is_open()){
+		while(infile){
+			string s;
+		    if (!getline( infile, s )) break;
+		    istringstream ss( s );
+		    vector <string> record;
+		    while (ss)
+		    {
+		      string s;
+		      if (!getline( ss, s, ' ' )) break;
+		      record.push_back( s );
+		    }
+		    if(Node == string_to_int(record[1])){
+		    	if(!Neighbour_Check[Bplus[string_to_int(record[2])]]){
+		    	Neighbours_X.push_back(Bplus[string_to_int(record[2])]);
+		    	Neighbour_Check[Bplus[string_to_int(record[2])]] = 1;
+		    	}
+		    }
+		    
+			
+		}
+	}
+	infile.close();
+	return Neighbours_X;
+}
+
+
+
+void update_pages_insert(vector<int>Neighbours_X,string NewRecord_FileName,int New_Node){
+	
+	for(int i=0;i<Neighbours_X.size();i++){
+		//for each neighbour read the new record and add its succesors and predecessors
+		ifstream infile;
+		ofstream outfile1;
+		string pageno1 = "page" + to_string(Neighbours_X[i]) + ".txt";
+		outfile1.open(pageno1,ios_base::app);
+		string pageno2 = NewRecord_FileName;
+		infile.open(pageno2);
+		int count = 0;
+		if(infile.is_open()){
+			while(infile){
+				string s;
+			    if (!getline( infile, s )) break;
+			    if(count == 0){
+			    	count++;
+			    	continue;
+			    }
+			    istringstream ss( s );
+			    vector <string> record;
+			    while (ss)
+			    {
+			      string s;
+			      if (!getline( ss, s, ' ' )) break;
+			      record.push_back( s );
+			    }
+			    if(Neighbours_X[i] ==Bplus[string_to_int(record[2])]){
+			    	if(record[0] == "s"){
+			    		string changed_line = "p"+record[2]+" "+record[1];
+			    		for(int j=3;j<record.size();j++){
+			    			changed_line = changed_line + " "+record[j];
+			    		}
+			    		outfile1<<changed_line<<endl;
+			    	}
+			    	else if(record[0] == "p"){
+			    		string changed_line = "s"+record[2]+" "+record[1];
+			    		for(int j=3;j<record.size();j++){
+			    			changed_line = changed_line + " "+record[j];
+			    		}
+			    		outfile1<<changed_line<<endl;
+			    	}
+			    }
+				
+			}
+		}
+		infile.close();
+	}
+}
+
+
+
+long int Calculate_File_Size(string FileName){
+		streampos begin,end;
+  		ifstream myfile (FileName, ios::binary);
+  		begin = myfile.tellg();
+  		myfile.seekg (0, ios::end);
+  		end = myfile.tellg();
+  		myfile.close();
+  		long int A;
+  		A = end-begin;
+  		return A;
+}
+
+int Select_Page(vector<int>Neighbours_X,string NewRecord_FileName,int New_Node){
+	vector< pair <int,int> > vect;
+	for (int i=0; i<Neighbours_X.size(); i++) 
+		vect.push_back( make_pair(Neighbours_X[i],0) );  
+
+	ifstream infile;
+	infile.open(NewRecord_FileName);
+	if(infile.is_open()){
+		while(infile){
+			string s;
+		    if (!getline( infile, s )) break;
+		    istringstream ss( s );
+		    vector <string> record;
+		    while (ss)
+		    {
+		      string s;
+		      if (!getline( ss, s, ' ' )) break;
+		      record.push_back( s );
+		    }
+		    
+		    for(int i=0;i<Neighbours_X.size();i++){
+		    	if(Neighbours_X[i] == Bplus[string_to_int(record[2])]){
+		    		vect[i].second = vect[i].second + 1;
+		    		break;
+		    	}
+		    }
+			
+		}
+	}
+	infile.close();
+
+	//Vect consists of X-neighbour page nos  and number of neighbours of X in each page 
+	sort(vect.begin(), vect.end(), sortbysec); 
+	for(int i=0;i<Neighbours_X.size();i++){
+		string Filename = "page_"+to_string(Neighbours_X[i])+".txt";
+		if((Calculate_File_Size(Filename)+Calculate_File_Size(NewRecord_FileName))<=PageSize){
+			return Neighbours_X[i];
+		}
+	}
+
+	return Neighbours_X[0];
+
+}
+
+
+void insert_node(string NewRecord_FileName,int New_Node ,int policy){
+	vector<int>Neighbours_X;
+	Neighbours_X = Get_Neighbour_Pages(NewRecord_FileName,New_Node);
+	if(Neighbours_X.size() == 0){
+		//Add this record to a new page and return
+		vector<int>records;
+		records.push_back(New_Node);
+		write_into_newpage(records);
+		return;
+	}
+
+	//copy the pages to the main memeory and and update them
+	update_pages_insert(Neighbours_X,NewRecord_FileName,New_Node);
+	//select a page among neighbours to push the record
+	int Selected_Page = Select_Page(Neighbours_X,NewRecord_FileName,New_Node);
+	//Append NewRecord_FileName contents to this page
+	string Selected_Page_Name = "page_"+to_string(Selected_Page)+".txt";
+	Merge_two_pages(Selected_Page_Name,NewRecord_FileName,Select_Page)
+
+	if(policy == 1){
+		for(int i=0;i<Neighbours_X.size();i++){
+			string Filename = "page_"+to_string(Neighbours_X[i])+".txt";
+			if(Calculate_File_Size(Filename)<=PageSize){
+				//leave it no changes needed
+			}
+			else{
+				//cluster the nodes of this page into two pages
+				vector<int>Nodes_in_page;
+				string FileName = "page_"+to_string(Neighbours_X[i])+".txt";
+				Nodes_in_page = Get_Nodes_In_Page(FileName);
+				cluster_nodes_into_pages(Nodes_in_page,PageSize/2);
+				remove(Filename);
+			}
+		}
+	}
+
+}
+
+
+vector<int> update_pages_delete(vector<int>Neighbours_X,int Old_Node){
+	//for each neighbour remove the nodes of Old_node
+	vector<int>Changed_Neighbours_X;
+	for(int i=0;i<Neighbours_X.size();i++){
+		ifstream infile;
+		ofstream outfile1;
+		string pageno1 = "page" + to_string(New_PageNo) + ".txt";
+		outfile1.open(pageno1,ios_base::app);
+		pageno2 = "page_"+to_string(Neighbours_X[i])+".txt";
+		infile.open(pageno2);
+		if(infile.is_open()){
+			while(infile){
+				string s;
+			    if (!getline( infile, s )) break;
+			    istringstream ss( s );
+			    vector <string> record;
+			    while (ss)
+			    {
+			      string s;
+			      if (!getline( ss, s, ' ' )) break;
+			      record.push_back( s );
+			    }
+			    if(string_to_int(record[2]) != Old_Node){
+			    	outfile1<<s<<endl;
+			    	Bplus[string_to_int(record[1])] = New_PageNo;
+			    }
+				
+			}
+		}
+		infile.close();
+		remove(pageno2);
+		Changed_Neighbours_X.push_back(New_PageNo);
+		New_PageNo++;
+	}
+
+}
+
+
+
+void Delete_Record_From_Page(string Del_Node_Page,int Old_Node){
+	ifstream infile;
+	ofstream outfile1;
+	string pageno1 = "page" + to_string(New_PageNo) + ".txt";
+	outfile1.open(pageno1,ios_base::app);
+	pageno2 = Del_Node_Page;
+	infile.open(pageno2);
+	if(infile.is_open()){
+		while(infile){
+			string s;
+		    if (!getline( infile, s )) break;
+		    istringstream ss( s );
+		    vector <string> record;
+		    while (ss)
+		    {
+		      string s;
+		      if (!getline( ss, s, ' ' )) break;
+		      record.push_back( s );
+		    }
+		    if(string_to_int(record[1]) != Old_Node){
+		    	outfile1<<s<<endl;
+		    	Bplus[string_to_int(record[1])] = New_PageNo;
+		    }
+			
+		}
+	}
+	infile.close();
+	remove(pageno2);
+	New_PageNo++;
+}
+
+void Merge_two_pages(string Filename1,string Filename2,int Old_Node_Page){
+	ifstream infile;
+	ofstream outfile1;
+	outfile1.open(Filename1,ios_base::app);
+	infile.open(Filename2);
+	if(infile.is_open()){
+		while(infile){
+			string s;
+		    if (!getline( infile, s )) break;
+		    istringstream ss( s );
+		    vector <string> record;
+		    while (ss)
+		    {
+		      string s;
+		      if (!getline( ss, s, ' ' )) break;
+		      record.push_back( s );
+		    }
+		    outfile1<<s<<endl;
+		    Bplus[string_to_int(record[1])] = Old_Node_Page;
+			
+		}
+	}
+	infile.close();
+	remove(Filename2);
+
+}
+
+
+void Delete_node(int Old_Node,int policy){
+	String Del_Node_Page = "page_"+to_string(Bplus[Old_Node])+".txt";
+	vector<int>Neighbours_X;
+	Neighbours_X = Get_Neighbour_Pages(Del_Node_Page,Old_Node);
+	//Remove the node from the neighbours of X
+	vector<int>Changed_Neighbours_X;
+	Changed_Neighbours_X = update_pages_delete(Neighbours_X,Old_Node);
+	Del_Node_Page = "page_"+to_string(Bplus[Old_Node])+".txt";
+	Delete_Record_From_Page(Del_Node_Page,Old_Node);
+	int Old_Node_Page = New_PageNo-1; 
+	Bplus[Old_Node] = -1;
+	
+	if(policy == 1){
+		string Filename = "page_"+to_string(Old_Node_Page)+".txt"
+		string Filename1;
+		if(Calculate_File_Size(Filename)<(PageSize/2)){
+				//underflow so merge two files
+			int flag = 0;
+			for(int i=0;i<Changed_Neighbours_X.size();i++){
+				if(Changed_Neighbours_X[i]!=Old_Node_Page){
+					Filename1 = "page_"+to_string(Changed_Neighbours_X[i])+".txt"
+					if((Calculate_File_Size(Filename) + Calculate_File_Size(Filename1))<=PageSize){
+						//Merge these two
+						Merge_two_pages(Filename,Filename1,Old_Node_Page);
+						flag = 1;
+						break;
+					}
+  				}
+			}
+			if(flag == 0){
+				//choose any page and cluster them
+
+				vector<int>Nodes_in_page1;
+				vector<int>Nodes_in_page2;
+				Nodes_in_page1 = Get_Nodes_In_Page(FileName);
+				Nodes_in_page2 = Get_Nodes_In_Page(Filename1);
+				Nodes_in_page1.insert(Nodes_in_page1.end(),Nodes_in_page2.begin(),Nodes_in_page2.end());
+				cluster_nodes_into_pages(Nodes_in_page1,PageSize/2);
+				remove(Filename);
+				remove(Filename1);
+			}
+
+		}
+		Bplus[Old_Node] = 0;
+	}
+
+
+
+}
+
+
 
 int main(){
 	//initialise and define page and secondary memory and primary memory
@@ -900,6 +1287,10 @@ int main(){
 	
 	cluster_nodes_into_pages(Nodes,(PageSize)/2);
 
+	//Now in Bplus we know which record is in which page and each record contains all its successors and predecessors and the clustering of page is done
+
+
+
 
 
 
@@ -942,13 +1333,24 @@ int main(){
 
 		}
 		else if(flag1 == 2){
-
+			//insert a node with ssuccessor list and predecessor list i.e a new record
+			int File_No,New_Node;
+			cout<<"Node no"<<endl;
+			cin>>New_Node;
+			cout<<"File Number"<<endl;
+			cin>>File_No;
+			string NewRecord_FileName = "page_"+to_string(File_No)+".txt";
+			Bplus[New_Node] = File_No;
+			insert_node(NewRecord_FileName,New_Node,policy);
 		}
 		else if(flag1 == 3){
 
 		}
 		else if(flag1 == 4){
-
+			int Old_Node;
+			cout<<"Node no"<<endl;
+			cin>>Old_Node;
+			Delete_node(Old_Node,policy);
 		}
 		else if(flag1 == 5){
 
