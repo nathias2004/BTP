@@ -1,0 +1,10 @@
+when we create text files we get a empty line in line number 1 we will get a problem when we read
+change t to s from left to right
+Left shifting means moving from Y to X
+sending a vector to a function makes a copy*****
+Data is not written properly into pages
+Bplus still not updated after creating new pages
+[0, 0, 320, 0, 0, 0, 955, 0, 141, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+
+Each time series take 20kb of space so in 4 mb we can have 200 time series and since there are 955 records with 6 neighbours we take 6 time series as one record. So each record takes 120 kb space which means we can assign 33 records in a single page and 66 records in two pages. So when we send records to the BFS we will send atleast 60 records to it.
+In updates_page_delete we have to consider while reading what happens if it becomes empty
