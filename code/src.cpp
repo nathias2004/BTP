@@ -1,6 +1,7 @@
 #include<iostream>
 #include<bits/stdc++.h>
 #include<boost/functional/hash.hpp>
+#include<stdio.h>
 using namespace std;
 long int PageSize = 4194304;			//In KB
 int No_Records_Page = 28;
@@ -26,7 +27,7 @@ void cluster_nodes_into_pages(vector<int>Nodes,long int Min_Page_Size);
 vector<int>BFS(vector<int>F,unordered_map<int,int>Nodes_present,long int limit);
 void remove_from_F(vector<int>&F, vector<int>&V_dash, unordered_map<int,int>&Nodes_present);
 void insert_node(string NewRecord_FileName,int New_node,int policy);
-
+void Merge_two_pages(string Filename1,string Filename2,int Old_Node_Page);
 
 
 
@@ -776,6 +777,15 @@ int calculate_no_of_rows(vector<int>A){
 
 
 
+bool IsPresent(int check_node,vector<int>nodes){
+	for(int i=0;i<nodes.size();i++){
+		if(nodes[i] == check_node){
+			return true;
+		}
+	}
+	return false;
+}
+
 vector<int>Get_Nodes_In_Page(string FileName){
 	vector<int>Nodes;
 	ifstream infile;
@@ -792,7 +802,7 @@ vector<int>Get_Nodes_In_Page(string FileName){
 		      if (!getline( ss, s, ' ' )) break;
 		      record.push_back( s );
 		    }
-		    if(!IsPresent(string_to_int(record[1],Nodes))){
+		    if(!IsPresent(string_to_int(record[1]),Nodes)){
 		    	Nodes.push_back(string_to_int(record[1]));
 		    }
 			
@@ -963,7 +973,7 @@ void insert_node(string NewRecord_FileName,int New_Node ,int policy){
 	int Selected_Page = Select_Page(Neighbours_X,NewRecord_FileName,New_Node);
 	//Append NewRecord_FileName contents to this page
 	string Selected_Page_Name = "page_"+to_string(Selected_Page)+".txt";
-	Merge_two_pages(Selected_Page_Name,NewRecord_FileName,Select_Page)
+	Merge_two_pages(Selected_Page_Name,NewRecord_FileName,Selected_Page);
 
 	if(policy == 1){
 		for(int i=0;i<Neighbours_X.size();i++){
@@ -977,7 +987,7 @@ void insert_node(string NewRecord_FileName,int New_Node ,int policy){
 				string FileName = "page_"+to_string(Neighbours_X[i])+".txt";
 				Nodes_in_page = Get_Nodes_In_Page(FileName);
 				cluster_nodes_into_pages(Nodes_in_page,PageSize/2);
-				remove(Filename);
+				remove(Filename.c_str());
 			}
 		}
 	}
@@ -993,7 +1003,7 @@ vector<int> update_pages_delete(vector<int>Neighbours_X,int Old_Node){
 		ofstream outfile1;
 		string pageno1 = "page" + to_string(New_PageNo) + ".txt";
 		outfile1.open(pageno1,ios_base::app);
-		pageno2 = "page_"+to_string(Neighbours_X[i])+".txt";
+		string pageno2 = "page_"+to_string(Neighbours_X[i])+".txt";
 		infile.open(pageno2);
 		if(infile.is_open()){
 			while(infile){
@@ -1015,7 +1025,7 @@ vector<int> update_pages_delete(vector<int>Neighbours_X,int Old_Node){
 			}
 		}
 		infile.close();
-		remove(pageno2);
+		remove(pageno2.c_str());
 		Changed_Neighbours_X.push_back(New_PageNo);
 		New_PageNo++;
 	}
@@ -1029,7 +1039,7 @@ void Delete_Record_From_Page(string Del_Node_Page,int Old_Node){
 	ofstream outfile1;
 	string pageno1 = "page" + to_string(New_PageNo) + ".txt";
 	outfile1.open(pageno1,ios_base::app);
-	pageno2 = Del_Node_Page;
+	string pageno2 = Del_Node_Page;
 	infile.open(pageno2);
 	if(infile.is_open()){
 		while(infile){
@@ -1051,7 +1061,7 @@ void Delete_Record_From_Page(string Del_Node_Page,int Old_Node){
 		}
 	}
 	infile.close();
-	remove(pageno2);
+	remove(pageno2.c_str());
 	New_PageNo++;
 }
 
@@ -1078,13 +1088,13 @@ void Merge_two_pages(string Filename1,string Filename2,int Old_Node_Page){
 		}
 	}
 	infile.close();
-	remove(Filename2);
+	remove(Filename2.c_str());
 
 }
 
 
 void Delete_node(int Old_Node,int policy){
-	String Del_Node_Page = "page_"+to_string(Bplus[Old_Node])+".txt";
+	string Del_Node_Page = "page_"+to_string(Bplus[Old_Node])+".txt";
 	vector<int>Neighbours_X;
 	Neighbours_X = Get_Neighbour_Pages(Del_Node_Page,Old_Node);
 	//Remove the node from the neighbours of X
@@ -1096,14 +1106,14 @@ void Delete_node(int Old_Node,int policy){
 	Bplus[Old_Node] = -1;
 	
 	if(policy == 1){
-		string Filename = "page_"+to_string(Old_Node_Page)+".txt"
+		string Filename = "page_"+to_string(Old_Node_Page)+".txt";
 		string Filename1;
 		if(Calculate_File_Size(Filename)<(PageSize/2)){
 				//underflow so merge two files
 			int flag = 0;
 			for(int i=0;i<Changed_Neighbours_X.size();i++){
 				if(Changed_Neighbours_X[i]!=Old_Node_Page){
-					Filename1 = "page_"+to_string(Changed_Neighbours_X[i])+".txt"
+					Filename1 = "page_"+to_string(Changed_Neighbours_X[i])+".txt";
 					if((Calculate_File_Size(Filename) + Calculate_File_Size(Filename1))<=PageSize){
 						//Merge these two
 						Merge_two_pages(Filename,Filename1,Old_Node_Page);
@@ -1117,12 +1127,12 @@ void Delete_node(int Old_Node,int policy){
 
 				vector<int>Nodes_in_page1;
 				vector<int>Nodes_in_page2;
-				Nodes_in_page1 = Get_Nodes_In_Page(FileName);
+				Nodes_in_page1 = Get_Nodes_In_Page(Filename);
 				Nodes_in_page2 = Get_Nodes_In_Page(Filename1);
 				Nodes_in_page1.insert(Nodes_in_page1.end(),Nodes_in_page2.begin(),Nodes_in_page2.end());
 				cluster_nodes_into_pages(Nodes_in_page1,PageSize/2);
-				remove(Filename);
-				remove(Filename1);
+				remove(Filename.c_str());
+				remove(Filename1.c_str());
 			}
 
 		}
